@@ -48,51 +48,35 @@ class SquareUvsMain(bpy.types.Operator):
 def main(context, operator):
     me = bpy.context.object.data
     bm = bmesh.from_edit_mesh(me)
-    uvLayer = bm.loops.layers.uv.verify()
+    uv_layer = bm.loops.layers.uv.verify()
 
     sel = GetSelected(bm)
-
     islands = FacesToIslands(sel)
 
-    count = 0 # debug
-
     for isl in islands:
-        print("Island " + str(count))
-        count += 1 #debug
-
-        border, inner = SplitIsland(isl)
-
-        AlignBorder(border, uvLayer)
+        border, inner, fringe = SplitIsland(isl)
+        AlignBorder(border, fringe, uv_layer)
 
 # Aligns the border of an island
-def AlignBorder(border, uvLayer):
-    fset = border
-
-    # debug
-    print("Entering AlignBorders")
+def AlignBorder(border, fringe, uv_layer):
+    fset = fringe
 
     while len(fset):
-        wall, align = GetWall(uvLayer, fset, fset.pop(0))
+        wall, align = GetWall(uv_layer, fset, fset.pop(0))
 
-        print("Wall:")
         for f in wall:
             if f in fset:
                 fset.remove(f)
-            print("    " + str(f.index))
 
-        AlignWall(uvLayer, wall, align)
-    
-    print("Exiting AlignBorders")
+        AlignWall(border, uv_layer, wall, align)
 
 # Gets a wall, which is a part of the border that shares an alignment.
-def GetWall(uvLayer, fset, start):
-    print("Entering GetWall") #debug
+def GetWall(uv_layer, fset,  start):
     wall = []
     wall.append(start)
-    align = GetAlignment(uvLayer, start)
+    align = GetAlignment(uv_layer, start)
 
-    adj = GetAdjacentFaces(start, fset, wall, align, uvLayer)
-
+    adj = GetAdjacentFaces(start, fset, wall, align, uv_layer)
 
     while len(adj):
         wall.extend(adj)
@@ -101,76 +85,83 @@ def GetWall(uvLayer, fset, start):
             if f in fset:
                 fset.remove(f)
 
-            adj = GetAdjacentFaces(f, fset, wall, align, uvLayer)
-
-    print("Exiting GetWall")
+        adj = GetAdjacentFaces(f, fset, wall, align, uv_layer)
 
     return wall, align
 
 # Aligns a wall
-def AlignWall(uvLayer, wall, align):
-    uvWall = []
+def AlignWall(border, uv_layer, wall, align):
+    uv_wall = []
 
     for f in wall:
         for e in f.edges:
             if e.seam:
-                for l in e.link_loops:
-                    if l in f.loops:
-                        uvWall.append(l[uvLayer])
+                for v in e.verts:
+                    for l in v.link_loops:
+                        for b in border:
+                            if l in b.loops:
+                                uv_wall.append(l[uv_layer])
 
     if align == ALIGN_X:
-        AlignX(uvWall)
+        AlignX(uv_wall)
     else:
-        AlignY(uvWall)
+        AlignY(uv_wall)
 
 # Aligns a wall to the average x value
-def AlignX(uvWall):
+def AlignX(uv_wall):
     sum = 0
-    length = len(uvWall)
+    length = len(uv_wall)
 
-    for uv in uvWall:
+    if length == 0:
+        return
+
+    for uv in uv_wall:
         sum += uv.uv.y
 
     avg = sum/length
 
-    for uv in uvWall:
+    for uv in uv_wall:
         uv.uv.y = avg
 
 # Aligns a wall to the average x value
-def AlignY(uvWall):
+def AlignY(uv_wall):
     sum = 0
-    length = len(uvWall)
+    length = len(uv_wall)
 
-    for uv in uvWall:
+    if length <= 0:
+        return
+
+    for uv in uv_wall:
         sum += uv.uv.x
 
     avg = sum/length
 
-    for uv in uvWall:
+    for uv in uv_wall:
         uv.uv.x = avg
 
 # Takes a face and returns the face corners of the face's edge with a seam
 # must pass in a face with a seam
 def GetSeamFaceCorners(face):
-    print("Entering GetSeamFaceCorners") # debug
 
     for l in face.loops:
         if l.edge.seam:
-            print("    face corner 0: " + str(l.index)) # debug
-            print("    face corner 1: " + str(l.link_loop_next.index)) # debug
-            print("Exiting GetSeamFaceCorners")
             return l, l.link_loop_next
 
-    raise Exception("ERROR: GetSeamFaceCorners must pass in a face with at least 1 seam edge")
-    return
+    return None
 
 # Returns whether a pair of face corners should be aligned to X or Y
-def GetAlignment(uvLayer, face):
-    print("Entering GetAlignment")
+def GetAlignment(uv_layer, face):
     fc = GetSeamFaceCorners(face)
 
-    uv1 = fc[0][uvLayer]
-    uv2 = fc[1][uvLayer]
+    if fc == None:
+        return NO_ALIGN
+
+    uv1 = fc[0][uv_layer]
+    uv2 = fc[1][uv_layer]
+
+    if (uv1.uv.x - uv2.uv.x) == 0:
+        return ALIGN_Y
+
     slope = (uv1.uv.y - uv2.uv.y) / (uv1.uv.x - uv2.uv.x)
 
     angle = math.atan(slope)
@@ -180,74 +171,68 @@ def GetAlignment(uvLayer, face):
     else:
         return ALIGN_Y
 
-    print("Exiting GetAlignment")
-    return
-
 # Gets the adjacent faces. Used to traverse the border
 # the adjacent face must be in bounds, and canoot be in exclude
-def GetAdjacentFaces(face, bounds, exclude, align, uvLayer):
-    print("Entering GetAdjacentFaces")
+def GetAdjacentFaces(face, bounds, exclude, align, uv_layer):
     adj = []
 
     for v in face.verts:
         for f in v.link_faces:
+            adj_align = GetAlignment(uv_layer, f)
+
+            if adj_align != align:
+                continue
             if f not in bounds:
                 continue
             if f in exclude:
                 continue
             if f in adj:
                 continue
-            if GetAlignment(uvLayer, f) != align:
-                continue
 
             adj.append(f)
-            print("    Adjacent: " + str(f.index))
 
-    print("Entering GetAdjacentFaces")
     return adj
 
-# splits island into border and inner faces
+# splits island into border, inner and fringe faces
+# fringe faces are faces with a seam as an edge, whereas 
+# borders can either have a seam edge or a vert connected 
+# to a seam edge
 def SplitIsland(isl):
     border = []
     inner = []
-    fset = isl
+    fringe = []
 
-    # debug
-    print("Splitting island")
-    border_count = 0
-    inner_count = 0
+    fset = isl
 
     for f in fset:
         has_seam = False
-        for e in f.edges:
-            if e.seam:
-                has_seam = True 
-                break
+        for v in f.verts:
+            for e in v.link_edges:
+                if e.seam:
+                    has_seam = True
         if has_seam:
             border.append(f)
-            border_count += 1
         else:
             inner.append(f)
-            inner_count += 1
 
-    print("Number of border faces: " + str(border_count))
-    print("Number of inner faces: " + str(inner_count))
+        has_seam = False
+        for e in f.edges:
+            if e.seam:
+                has_seam = True
+                break
+        if has_seam:
+            fringe.append(f)
 
-    return border, inner
+    return border, inner, fringe
 
 # Returns 2D array, faces in islands.
 def FacesToIslands(sel):
-    print("Entering FacesToIslands")
-
     islands = []
     fset = sel
-    islcount = 0 # debug
 
     while len(fset):
         isl = []
         isl.append(fset.pop(0))
-
-        count = 1 # debug
 
         for f in isl:
             for e in f.edges:
@@ -256,7 +241,6 @@ def FacesToIslands(sel):
                         if n in isl:
                             continue
                         isl.append(n)
-                        count += 1 # debug
 
         islands.append(isl)
 
@@ -264,24 +248,15 @@ def FacesToIslands(sel):
             if f in fset:
                 fset.remove(f)
 
-        print("Island " + str(islcount) + ": Faces: " + str(count)) # debug
-        islcount += 1 # debug
-
-    print("Exiting FacesToIslands")
     return islands
 
 # Returns all selected faces
 def GetSelected(bm):
-    print("Isolating selected") # debug
     sel = []
-    count = 0 # debug
 
     for f in bm.faces:
         if f.select:
             sel.append(f)
-            count += 1 # debug
-
-    print("Number of selected faces: " + str(count)) # debug
 
     return sel
 
