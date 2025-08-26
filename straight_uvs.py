@@ -2,8 +2,8 @@ bl_info = {
     "name": "Square UV Edges",
     "description": "Straightens the bordering edges of UV tiles",
     "author": "Liam D'Arcy",
-    "version": (0, 0, 1),
-    "blender": (4, 5, 1),
+    "version": (0, 0, 2),
+    "blender": (4, 5, 2),
     "location": "UV Editor > Panel > Square UVs",
     "category": "UV"
 }
@@ -17,7 +17,7 @@ ALIGN_X = 0
 ALIGN_Y = 1
 
 # UI class
-class SquareUvsUi(bpy.types.Panel):
+class StraightUvsUI(bpy.types.Panel):
     """UI Interface for the Square UVs Addon"""
     bl_label = "Square UVs"
     bl_idname = "PT_SquareUvs"
@@ -29,13 +29,19 @@ class SquareUvsUi(bpy.types.Panel):
         layout = self.layout
 
         row = layout.row()
-        row.operator(SquareUvsMain.bl_idname)
+        row.operator(StraightUvsButton.bl_idname)
 
-class SquareUvsMain(bpy.types.Operator):
+class StraightUvsButton(bpy.types.Operator):
     """Main squaring method for square UVs"""
     bl_idname = "uv.square_uvs"
     bl_label = "Square UVs"
     bl_options = {'REGISTER', 'UNDO'}
+
+    smooth_iter: bpy.props.IntProperty(
+        name="Smooth Iterations",
+        default=2,
+        description="Number of smoothing iterations post-straightening"
+    )
 
     @classmethod
     def poll(cls, context):
@@ -56,6 +62,44 @@ def main(context, operator):
     for isl in islands:
         border, inner, fringe = SplitIsland(isl)
         AlignBorder(border, fringe, uv_layer)
+        SmoothInner(uv_layer, inner, operator.smooth_iter)
+
+    bmesh.update_edit_mesh(me)
+
+
+def SmoothInner(uv_layer, inner, iter):
+    for i in range(0, iter):
+        for v in inner:
+            x, y = GetAvgPos(uv_layer, v)
+
+            for l in v.link_loops:
+                l[uv_layer].uv.x = x
+                l[uv_layer].uv.y = y
+
+    return
+
+def GetAvgPos(uv_layer, v):
+    avg_x = 0
+    avg_y = 0
+    num_edges = 0.0
+
+    for l in v.link_loops:
+        w = l.link_loop_next
+        uv = w[uv_layer].uv
+
+        avg_x += uv.x
+        avg_y += uv.y
+        num_edges += 1.0
+
+    if num_edges <= 0:
+        # if num edges = 0, return verts own UV coordinates
+        return v.link_loops[0][uv_layer].uv.x, v.link_loops[0][uv_layer].uv.y
+
+    avg_x = avg_x / num_edges
+    avg_y = avg_y / num_edges
+
+    return avg_x, avg_y
+
 
 # Aligns the border of an island
 def AlignBorder(border, fringe, uv_layer):
@@ -213,7 +257,8 @@ def SplitIsland(isl):
         if has_seam:
             border.append(f)
         else:
-            inner.append(f)
+            for v in f.verts:
+                inner.append(v)
 
         has_seam = False
         for e in f.edges:
@@ -261,12 +306,12 @@ def GetSelected(bm):
     return sel
 
 def register():
-    bpy.utils.register_class(SquareUvsUi)
-    bpy.utils.register_class(SquareUvsMain)
+    bpy.utils.register_class(StraightUvsUI)
+    bpy.utils.register_class(StraightUvsButton)
 
 def unregister():
-    bpy.utils.unregister_class(SquareUvsUi)
-    bpy.utils.unregister_class(SquareUvsMain)
+    bpy.utils.register_class(StraightUvsUI)
+    bpy.utils.register_class(StraightUvsButton)
 
 if __name__ == "__main__":
     register()
