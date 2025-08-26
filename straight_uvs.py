@@ -93,7 +93,7 @@ def SmoothInnerOp(context, operator):
     bm = bmesh.from_edit_mesh(me)
     uv_layer = bm.loops.layers.uv.verify()
     
-    sel = GetSelected(bm)
+    sel = GetSelected(uv_layer, bm)
     islands = FacesToIslands(sel)
 
     for isl in islands:
@@ -108,7 +108,7 @@ def StraightUvsOp(context, operator):
     bm = bmesh.from_edit_mesh(me)
     uv_layer = bm.loops.layers.uv.verify()
 
-    sel = GetSelected(bm)
+    sel = GetSelected(uv_layer, bm)
     islands = FacesToIslands(sel)
 
     for isl in islands:
@@ -348,12 +348,13 @@ def FacesToIslands(sel):
     return islands
 
 # Returns all selected faces
-def GetSelected(bm):
+def GetSelected(uv_layer, bm):
     sel = []
 
     for f in bm.faces:
-        if f.select:
-            sel.append(f)
+        for l in f.loops:
+            if l[uv_layer].select:
+                sel.append(f)
 
     return sel
 
