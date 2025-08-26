@@ -1,10 +1,26 @@
+"""
+This file is part of the Straighten UVs Addon.
+the Straighten UVs Addon is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published 
+by the Free Software Foundation, either version 3 of the License, 
+or (at your option) any later version.
+
+the Straighten UVs Addon is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with the Straighten UVs Addon. If not, see <https://www.gnu.org/licenses/>. 
+"""
+
 bl_info = {
-    "name": "Square UV Edges",
+    "name": "Straighten UV Edges",
     "description": "Straightens the bordering edges of UV tiles",
     "author": "Liam D'Arcy",
     "version": (0, 0, 2),
     "blender": (4, 5, 2),
-    "location": "UV Editor > Panel > Square UVs",
+    "location": "UV Editor > Panel > Straighten UVs",
     "category": "UV"
 }
 
@@ -18,7 +34,7 @@ ALIGN_Y = 1
 
 # UI class
 class StraightUvsUI(bpy.types.Panel):
-    """UI Interface for the Square UVs Addon"""
+    """UI Interface for the Straighten UVs Addon"""
     bl_label = "Straight UVs"
     bl_idname = "PT_StraightUvs"
     bl_space_type = 'IMAGE_EDITOR'
