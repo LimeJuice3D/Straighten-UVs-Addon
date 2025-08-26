@@ -18,7 +18,7 @@ bl_info = {
     "name": "Straighten UV Edges",
     "description": "Straightens the bordering edges of UV tiles",
     "author": "Liam D'Arcy",
-    "version": (0, 0, 2),
+    "version": (0, 0, 3),
     "blender": (4, 5, 2),
     "location": "UV Editor > Panel > Straighten UVs",
     "category": "UV"
@@ -46,6 +46,27 @@ class StraightUvsUI(bpy.types.Panel):
 
         row = layout.row()
         row.operator(StraightUvsButton.bl_idname)
+        row = layout.row()
+        row.operator(SmoothInnerButton.bl_idname)
+
+class SmoothInnerButton(bpy.types.Operator):
+    bl_idname = "uv.smooth_inner"
+    bl_label = "Smooth Inner Verts"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    smooth_iter: bpy.props.IntProperty(
+        name="Smooth Iterations",
+        default=2,
+        description="Number of smoothing iterations post-straightening"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return (context.mode == 'EDIT_MESH')
+
+    def execute(self, context):
+        SmoothInnerOp(context, self)
+        return {'FINISHED'}
 
 class StraightUvsButton(bpy.types.Operator):
     """Main squaring method for square UVs"""
@@ -64,10 +85,25 @@ class StraightUvsButton(bpy.types.Operator):
         return (context.mode == 'EDIT_MESH')
 
     def execute(self, context):
-        main(context, self)
+        StraightUvsOp(context, self)
         return {'FINISHED'}
 
-def main(context, operator):
+def SmoothInnerOp(context, operator):
+    me = bpy.context.object.data
+    bm = bmesh.from_edit_mesh(me)
+    uv_layer = bm.loops.layers.uv.verify()
+    
+    sel = GetSelected(bm)
+    islands = FacesToIslands(sel)
+
+    for isl in islands:
+        border, inner, fringe = SplitIsland(isl)
+        SmoothInner(uv_layer, inner, operator.smooth_iter)
+    
+    bmesh.update_edit_mesh(me)
+
+
+def StraightUvsOp(context, operator):
     me = bpy.context.object.data
     bm = bmesh.from_edit_mesh(me)
     uv_layer = bm.loops.layers.uv.verify()
@@ -324,10 +360,12 @@ def GetSelected(bm):
 def register():
     bpy.utils.register_class(StraightUvsUI)
     bpy.utils.register_class(StraightUvsButton)
+    bpy.utils.register_class(SmoothInnerButton)
 
 def unregister():
-    bpy.utils.register_class(StraightUvsUI)
-    bpy.utils.register_class(StraightUvsButton)
+    bpy.utils.unregister_class(StraightUvsUI)
+    bpy.utils.unregister_class(StraightUvsButton)
+    bpy.utils.unregister_class(SmoothInnerButton)
 
 if __name__ == "__main__":
     register()
