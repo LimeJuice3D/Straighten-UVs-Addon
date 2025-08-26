@@ -19,11 +19,11 @@ ALIGN_Y = 1
 # UI class
 class StraightUvsUI(bpy.types.Panel):
     """UI Interface for the Square UVs Addon"""
-    bl_label = "Square UVs"
-    bl_idname = "PT_SquareUvs"
+    bl_label = "Straighten UVs"
+    bl_idname = "PT_StraightUvs"
     bl_space_type = 'IMAGE_EDITOR'
     bl_region_type = 'UI'
-    bl_category = 'Square UVs'
+    bl_category = 'Straight UVs'
 
     def draw(self, context):
         layout = self.layout
@@ -33,8 +33,8 @@ class StraightUvsUI(bpy.types.Panel):
 
 class StraightUvsButton(bpy.types.Operator):
     """Main squaring method for square UVs"""
-    bl_idname = "uv.square_uvs"
-    bl_label = "Square UVs"
+    bl_idname = "uv.straight_uvs"
+    bl_label = "Straight UVs"
     bl_options = {'REGISTER', 'UNDO'}
 
     smooth_iter: bpy.props.IntProperty(
