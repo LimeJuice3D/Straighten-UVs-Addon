@@ -128,7 +128,15 @@ def StraightUvsOp(context, operator):
     bmesh.update_edit_mesh(me)
 
 def IsBorder(uv_layer, edge):
-    return edge.seam
+
+    if edge.seam:
+        return True
+
+    if len(edge.link_faces) < 2:
+        return True
+
+    return False
+
 
 def SmoothInner(uv_layer, inner, iter):
     for i in range(0, iter):
