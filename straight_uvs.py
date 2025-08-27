@@ -15,29 +15,32 @@ along with the Straighten UVs Addon. If not, see <https://www.gnu.org/licenses/>
 """
 
 # TODO: Create IsBorder function to replace seam checks (IsBorder checks if all loops have same/diff coords)
-# TODO: Change GetAlignment to return up, left, right, down states based on edge perpendicularity
-# TODO: Change inner isolation to include inner verts not part of the outer faces
+#   currently broken, stub in place at the moment
+
+# Changelist:
+#   Changed inner filtering to include all inner verts, not just verts of inner faces
+#   Changed alignment system to include up, down, left and right sides rather than just ALIGN_X and ALIGN_Y
 
 bl_info = {
     "name": "Straighten UV Edges",
     "description": "Straightens the bordering edges of UV tiles",
     "author": "Liam D'Arcy",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (4, 5, 2),
     "location": "UV Editor > Panel > Straighten UVs",
     "category": "UV"
 }
-
-# TODO:
-# Change border detection method from if e.seam to if face corners not equal coords
 
 import bpy
 import bmesh
 import math
 
 NO_ALIGN = -1
-ALIGN_X = 0
-ALIGN_Y = 1
+UP = 0
+DOWN = 1
+LEFT = 2 
+RIGHT = 3
+
 
 # UI class
 class StraightUvsUI(bpy.types.Panel):
@@ -99,16 +102,15 @@ def SmoothInnerOp(context, operator):
     me = bpy.context.object.data
     bm = bmesh.from_edit_mesh(me)
     uv_layer = bm.loops.layers.uv.verify()
-    
+
     sel = GetSelected(uv_layer, bm)
-    islands = FacesToIslands(sel)
+    islands = FacesToIslands(uv_layer, sel)
 
     for isl in islands:
-        border, inner, fringe = SplitIsland(isl)
+        border, inner, fringe = SplitIsland(uv_layer, isl)
         SmoothInner(uv_layer, inner, operator.smooth_iter)
-    
-    bmesh.update_edit_mesh(me)
 
+    bmesh.update_edit_mesh(me)
 
 def StraightUvsOp(context, operator):
     me = bpy.context.object.data
@@ -116,15 +118,17 @@ def StraightUvsOp(context, operator):
     uv_layer = bm.loops.layers.uv.verify()
 
     sel = GetSelected(uv_layer, bm)
-    islands = FacesToIslands(sel)
+    islands = FacesToIslands(uv_layer, sel)
 
     for isl in islands:
-        border, inner, fringe = SplitIsland(isl)
+        border, inner, fringe = SplitIsland(uv_layer, isl)
         AlignBorder(border, fringe, uv_layer)
         SmoothInner(uv_layer, inner, operator.smooth_iter)
 
     bmesh.update_edit_mesh(me)
 
+def IsBorder(uv_layer, edge):
+    return edge.seam
 
 def SmoothInner(uv_layer, inner, iter):
     for i in range(0, iter):
@@ -198,19 +202,19 @@ def AlignWall(border, uv_layer, wall, align):
 
     for f in wall:
         for e in f.edges:
-            if e.seam:
+            if IsBorder(uv_layer, e):
                 for v in e.verts:
                     for l in v.link_loops:
                         for b in border:
                             if l in b.loops:
                                 uv_wall.append(l[uv_layer])
 
-    if align == ALIGN_X:
+    if align == UP or align == DOWN:
         AlignX(uv_wall)
     else:
         AlignY(uv_wall)
 
-# Aligns a wall to the average x value
+# Aligns a wall to the average y value
 def AlignX(uv_wall):
     sum = 0
     length = len(uv_wall)
@@ -242,37 +246,45 @@ def AlignY(uv_wall):
     for uv in uv_wall:
         uv.uv.x = avg
 
-# Takes a face and returns the face corners of the face's edge with a seam
-# must pass in a face with a seam
-def GetSeamFaceCorners(face):
-
-    for l in face.loops:
-        if l.edge.seam:
-            return l, l.link_loop_next
-
-    return None
-
 # Returns whether a pair of face corners should be aligned to X or Y
 def GetAlignment(uv_layer, face):
-    fc = GetSeamFaceCorners(face)
+    fc = []
 
-    if fc == None:
+    for l in face.loops:
+        if IsBorder(uv_layer, l.edge):
+            fc.append(l)
+            fc.append(l.link_loop_next)
+            break
+
+    if len(fc) <= 0:
         return NO_ALIGN
 
     uv1 = fc[0][uv_layer]
     uv2 = fc[1][uv_layer]
 
     if (uv1.uv.x - uv2.uv.x) == 0:
-        return ALIGN_Y
+        uv_in = fc[0].link_loop_prev[uv_layer].uv
+        if uv_in.x <= fc[0][uv_layer].uv.x:
+            return LEFT
+        else:
+            return RIGHT
 
     slope = (uv1.uv.y - uv2.uv.y) / (uv1.uv.x - uv2.uv.x)
 
     angle = math.atan(slope)
 
     if angle < math.pi/4 and angle > -math.pi/4:
-        return ALIGN_X
+        uv_in = fc[0].link_loop_prev[uv_layer].uv
+        if uv_in.y <= fc[0][uv_layer].uv.y:
+            return DOWN
+        else:
+            return UP
     else:
-        return ALIGN_Y
+        uv_in = fc[0].link_loop_prev[uv_layer].uv
+        if uv_in.x <= fc[0][uv_layer].uv.x:
+            return LEFT
+        else:
+            return RIGHT
 
 # Gets the adjacent faces. Used to traverse the border
 # the adjacent face must be in bounds, and canoot be in exclude
@@ -300,7 +312,7 @@ def GetAdjacentFaces(face, bounds, exclude, align, uv_layer):
 # fringe faces are faces with a seam as an edge, whereas 
 # borders can either have a seam edge or a vert connected 
 # to a seam edge
-def SplitIsland(isl):
+def SplitIsland(uv_layer, isl):
     border = []
     inner = []
     fringe = []
@@ -311,26 +323,30 @@ def SplitIsland(isl):
         has_seam = False
         for v in f.verts:
             for e in v.link_edges:
-                if e.seam:
+                if IsBorder(uv_layer, e):
                     has_seam = True
+                    break
+            if not has_seam:
+                inner.append(v)
+            else:
+                break
+
         if has_seam:
             border.append(f)
-        else:
-            for v in f.verts:
-                inner.append(v)
 
         has_seam = False
         for e in f.edges:
-            if e.seam:
+            if IsBorder(uv_layer, e):
                 has_seam = True
                 break
         if has_seam:
             fringe.append(f)
 
+
     return border, inner, fringe
 
 # Returns 2D array, faces in islands.
-def FacesToIslands(sel):
+def FacesToIslands(uv_layer, sel):
     islands = []
     fset = sel
 
@@ -340,7 +356,7 @@ def FacesToIslands(sel):
 
         for f in isl:
             for e in f.edges:
-                if not e.seam:
+                if not IsBorder(uv_layer, e):
                     for n in e.link_faces:
                         if n in isl:
                             continue
