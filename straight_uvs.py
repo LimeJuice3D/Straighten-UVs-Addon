@@ -383,9 +383,10 @@ def GetSelected(uv_layer, bm):
     sel = []
 
     for f in bm.faces:
-        for l in f.loops:
-            if l[uv_layer].select:
-                sel.append(f)
+        if f.select:
+            for l in f.loops:
+                if l[uv_layer].select:
+                    sel.append(f)
 
     return sel
 
