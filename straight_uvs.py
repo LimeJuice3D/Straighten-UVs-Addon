@@ -14,6 +14,10 @@ You should have received a copy of the GNU General Public License
 along with the Straighten UVs Addon. If not, see <https://www.gnu.org/licenses/>. 
 """
 
+# TODO: Create IsBorder function to replace seam checks (IsBorder checks if all loops have same/diff coords)
+# TODO: Change GetAlignment to return up, left, right, down states based on edge perpendicularity
+# TODO: Change inner isolation to include inner verts not part of the outer faces
+
 bl_info = {
     "name": "Straighten UV Edges",
     "description": "Straightens the bordering edges of UV tiles",
