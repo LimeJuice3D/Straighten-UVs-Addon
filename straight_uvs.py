@@ -14,10 +14,8 @@ You should have received a copy of the GNU General Public License
 along with the Straighten UVs Addon. If not, see <https://www.gnu.org/licenses/>. 
 """
 
-# TODO: Create IsBorder function to replace seam checks (IsBorder checks if all loops have same/diff coords)
-#   currently broken, stub in place at the moment
-
 # Changelist:
+#   Changed IsBorder function to include open edges as well as UVs
 #   Changed inner filtering to include all inner verts, not just verts of inner faces
 #   Changed alignment system to include up, down, left and right sides rather than just ALIGN_X and ALIGN_Y
 
