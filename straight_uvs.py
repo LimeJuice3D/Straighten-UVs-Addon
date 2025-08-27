@@ -24,6 +24,9 @@ bl_info = {
     "category": "UV"
 }
 
+# TODO:
+# Change border detection method from if e.seam to if face corners not equal coords
+
 import bpy
 import bmesh
 import math
