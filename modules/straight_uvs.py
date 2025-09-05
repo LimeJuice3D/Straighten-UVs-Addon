@@ -19,15 +19,6 @@ along with the Straighten UVs Addon. If not, see <https://www.gnu.org/licenses/>
 #   Changed inner filtering to include all inner verts, not just verts of inner faces
 #   Changed alignment system to include up, down, left and right sides rather than just ALIGN_X and ALIGN_Y
 
-bl_info = {
-    "name": "Straighten UV Edges",
-    "description": "Straightens the bordering edges of UV tiles",
-    "author": "Liam D'Arcy",
-    "version": (0, 0, 4),
-    "blender": (4, 5, 2),
-    "location": "UV Editor > Panel > Straighten UVs",
-    "category": "UV"
-}
 
 import bpy
 import bmesh
