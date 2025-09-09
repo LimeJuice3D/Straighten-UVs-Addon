@@ -1,7 +1,7 @@
 # Lime Juice's Blender Toolkit
 A series of addons I made for my 3D workflow.
 
-# Straight UVs Addon
+# Straight UVs Tool
 
 UV editing tool for straightening outer UV edges.
 
@@ -15,8 +15,7 @@ Smooth Inner Verts
 
 ## Installation:
 1. Download ZIP file
-2. Extract straight_uvs.py
-3. In blender > preferences > addons, select Install from Disk (top right dropdown) and select straight_uvs.py
+3. In blender > preferences > addons, select Install from Disk (top right dropdown) and select ZIP file.
 
 This addon is currently untested and in-development, and as such the addon is feature-limited and prone to bugs.
 As of currently, the addon is ineffective on 1-face width UVs or UV sections, and if any UVs were ripped 
