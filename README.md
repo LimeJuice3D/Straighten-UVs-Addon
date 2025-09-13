@@ -1,6 +1,3 @@
-# Lime Juice's Blender Toolkit
-A series of addons I made for my 3D workflow.
-
 # Straight UVs Tool
 
 UV editing tool for straightening outer UV edges.
