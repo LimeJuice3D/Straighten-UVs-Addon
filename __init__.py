@@ -1,8 +1,8 @@
 from .modules import straight_uvs
 
 bl_info = {
-    "name": "Lime Juice's Blender Toolkit",
-    "description": "A Collection of NPR-Based 3D Tools",
+    "name": "Straighten UVs Addon",
+    "description": "Straightens UVs for Square UV Workflows",
     "author": "Liam D'Arcy",
     "version": (0, 0, 5),
     "blender": (4, 5, 2),
