@@ -10,4 +10,4 @@ tags = ["UV"]
 blender_version_min = "4.5.2"
 license = ["SPDX:GPL-3.0-or-later"]
 website = "https://github.com/LimeJuice3D/Straighten-UVs-Addon"
-copyright = "2025 LimeJuice3D"
+copyright = ["2025 LimeJuice3D"]
