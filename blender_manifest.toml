@@ -1,0 +1,13 @@
+schema_version = "1.0.0"
+
+id = "straighten_uvs_addon"
+version = "0.0.5"
+name = "Straighten UVs"
+tagline = "Straighten UVs Addon"
+maintainer = "LimeJuice3D"
+type = "add-on"
+tags = ["UV"]
+blender_version_min = "4.5.2"
+license = ["SPDX:GPL-3.0-or-later"]
+website = "https://github.com/LimeJuice3D/Straighten-UVs-Addon"
+copyright = "2025 LimeJuice3D"
