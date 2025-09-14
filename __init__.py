@@ -3,7 +3,7 @@ from .modules import straight_uvs
 bl_info = {
     "name": "Straighten UVs Addon",
     "description": "Straightens UVs for Square UV Workflows",
-    "author": "Liam D'Arcy",
+    "author": "Lime Juice 3D",
     "version": (0, 0, 5),
     "blender": (4, 5, 2),
     "category": "UV"
